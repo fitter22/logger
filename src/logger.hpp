@@ -5,7 +5,6 @@
 #include <mutex>
 #include <sstream>
 #include <iostream>
-#include <condition_variable>
 #include <thread>
 
 // logging library supports three severity levels
@@ -42,7 +41,6 @@ class log_logic : public log_logic_interface
   private:
     std::ofstream file_stream;
     std::string full_msg;
-    std::condition_variable write_cond;
     void write(std::string msg);
     std::mutex write_mutex;
   public:
