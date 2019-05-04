@@ -41,5 +41,5 @@ TEST_F(LoggerTest, header_with_error)
 
 TEST_F(LoggerTest, empty_filename_exception)
 {
-  EXPECT_ANY_THROW(logger logger("", output_type::file));
+  EXPECT_ANY_THROW(Logger logger("", output_type::file));
 }

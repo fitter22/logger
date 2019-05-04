@@ -91,7 +91,7 @@ LogLogic::~LogLogic()
 // Main logger instance
 //------------------------------------------
 
-class logger
+class Logger
 {
   private:
     std::string log_stream;
@@ -101,13 +101,13 @@ class logger
   public:
     std::string getTime();
     std::string getHeader(severity_type severity);
-    logger(const std::string& name, output_type output_type);
+    Logger(const std::string& name, output_type output_type);
     void print(const std::string& msg, severity_type severity);
-    ~logger();
+    ~Logger();
 };
 
 
-void logger::print(const std::string& msg, severity_type severity)
+void Logger::print(const std::string& msg, severity_type severity)
 {
   std::string log_msg = getHeader(severity) + log_stream + msg;
 
@@ -122,7 +122,7 @@ void logger::print(const std::string& msg, severity_type severity)
 }
 
 
-std::string logger::getTime()
+std::string Logger::getTime()
 {
     std::string time_str;
     time_t raw_time;
@@ -131,7 +131,7 @@ std::string logger::getTime()
     return time_str.substr(0 , time_str.size() - 1); // delete newline character
 }
 
-std::string logger::getHeader(severity_type severity)
+std::string Logger::getHeader(severity_type severity)
 {
     std::stringstream header;
     header.str("");
@@ -156,7 +156,7 @@ std::string logger::getHeader(severity_type severity)
     return header.str();
 }
 
-logger::logger(const std::string& name, output_type output_type)
+Logger::Logger(const std::string& name, output_type output_type)
 {
   output = output_type;
 
@@ -172,7 +172,7 @@ logger::logger(const std::string& name, output_type output_type)
   }
 }
 
-logger::~logger()
+Logger::~Logger()
 {
     if(writer)
     {
@@ -185,4 +185,4 @@ logger::~logger()
 }
 
 // make static logger obj, so it lives until the program ends
-static logger log_inst("execution.log", output_type::file);
+static Logger log_inst("execution.log", output_type::file);
