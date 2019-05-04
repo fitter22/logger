@@ -28,15 +28,15 @@ enum output_type
 
 
 
-class log_logic_interface
+class LogLogicInterface
 {
   public:
-    virtual void open_ostream(const std::string& name) = 0;
-    virtual void close_ostream() = 0;
-    virtual void write_thread(std::string& msg) = 0;
+    virtual void openStream(const std::string& name) = 0;
+    virtual void closeStream() = 0;
+    virtual void writeThread(std::string& msg) = 0;
 };
 
-class log_logic : public log_logic_interface
+class LogLogic : public LogLogicInterface
 {
   private:
     std::ofstream file_stream;
@@ -44,14 +44,14 @@ class log_logic : public log_logic_interface
     void write(std::string msg);
     std::mutex write_mutex;
   public:
-    log_logic() {}
-    void open_ostream(const std::string& name);
-    void close_ostream();
-    void write_thread(std::string& msg);
-    ~log_logic();
+    LogLogic() {}
+    void openStream(const std::string& name);
+    void closeStream();
+    void writeThread(std::string& msg);
+    ~LogLogic();
 };
 
-void log_logic::open_ostream(const std::string& name)
+void LogLogic::openStream(const std::string& name)
 {
   file_stream.open(name.c_str(), std::ios_base::binary|std::ios_base::out);
   if(!file_stream.is_open())
@@ -60,7 +60,7 @@ void log_logic::open_ostream(const std::string& name)
   }
 }
 
-void log_logic::close_ostream()
+void LogLogic::closeStream()
 {
   if(file_stream)
   {
@@ -68,22 +68,22 @@ void log_logic::close_ostream()
   }
 }
 
-void log_logic::write(std::string full_msg)
+void LogLogic::write(std::string full_msg)
 {
   write_mutex.lock();
   file_stream<<full_msg<<std::endl;
   write_mutex.unlock();
 }
 
-void log_logic::write_thread(std::string& msg)
+void LogLogic::writeThread(std::string& msg)
 {
-  std::thread t(&log_logic::write, this, msg);
+  std::thread t(&LogLogic::write, this, msg);
   t.detach();
 }
 
-log_logic::~log_logic()
+LogLogic::~LogLogic()
 {
-    close_ostream();
+    closeStream();
 }
 
 
@@ -94,13 +94,13 @@ log_logic::~log_logic()
 class logger
 {
   private:
-    std::string get_time();
-    std::string get_header(severity_type severity);
     std::string log_stream;
-    log_logic* policy;
+    LogLogic* writer;
     output_type output;
 
   public:
+    std::string getTime();
+    std::string getHeader(severity_type severity);
     logger(const std::string& name, output_type output_type);
     void print(const std::string& msg, severity_type severity);
     ~logger();
@@ -109,11 +109,11 @@ class logger
 
 void logger::print(const std::string& msg, severity_type severity)
 {
-  std::string log_msg = get_header(severity) + log_stream + msg;
+  std::string log_msg = getHeader(severity) + log_stream + msg;
 
   if(output == output_type::file)
   {
-    policy->write_thread(log_msg);
+    writer->writeThread(log_msg);
   }
   else if (output == output_type::standard_output)
   {
@@ -122,7 +122,7 @@ void logger::print(const std::string& msg, severity_type severity)
 }
 
 
-std::string logger::get_time()
+std::string logger::getTime()
 {
     std::string time_str;
     time_t raw_time;
@@ -131,11 +131,11 @@ std::string logger::get_time()
     return time_str.substr(0 , time_str.size() - 1); // delete newline character
 }
 
-std::string logger::get_header(severity_type severity)
+std::string logger::getHeader(severity_type severity)
 {
     std::stringstream header;
     header.str("");
-    header<<"<"<<get_time()<<" - ";
+    header<<"<"<<getTime()<<" - ";
     header.fill('0');
     header.width(7);
     header<<clock()<<"> "; // time in ms from the program start
@@ -160,29 +160,29 @@ logger::logger(const std::string& name, output_type output_type)
 {
   output = output_type;
 
-  policy = new log_logic;
-  if(!policy)
+  writer = new LogLogic;
+  if(!writer)
   {
     throw std::runtime_error("LOGGER: Unable to create the logger instance");
   }
 
   if(output == output_type::file)
   {
-    policy->open_ostream(name);
+    writer->openStream(name);
   }
 }
 
 logger::~logger()
 {
-    if(policy)
+    if(writer)
     {
       if(output == output_type::file)
       {
-        policy->close_ostream();
+        writer->closeStream();
       }
-      delete policy;
+      delete writer;
     }
 }
 
 // make static logger obj, so it lives until the program ends
-static logger log_inst("execution.log", output_type::standard_output);
+static logger log_inst("execution.log", output_type::file);
