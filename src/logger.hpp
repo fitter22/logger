@@ -5,7 +5,6 @@
 #include <mutex>
 #include <sstream>
 #include <iostream>
-#include <thread>
 
 // logging library supports three severity levels
 enum severity_type
