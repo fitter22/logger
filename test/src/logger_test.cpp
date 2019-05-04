@@ -32,7 +32,7 @@ TEST_F(LoggerTest, header_with_warning)
   EXPECT_TRUE(std::regex_match(header ,warning_header));
 }
 
-TEST_F(LoggerTest, headers_with_error)
+TEST_F(LoggerTest, header_with_error)
 {
   std::string header = log_inst.getHeader(severity_type::error);
   std::regex error_header (".*<ERROR>.*");
