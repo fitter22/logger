@@ -31,20 +31,19 @@ class LogLogic
   private:
     std::ofstream file_stream;
     std::string full_msg;
-    std::mutex write_mutex;
     output_type output;
-    void writeToStdo(std::string msg);
+    void writeToStdo(std::string &msg);
     void writeToFilestream(std::string msg);
     void writeThread(std::string& msg);
-    void write(std::string msg);
-    void openStream(const std::string& name);
+    void write(std::string &msg);
+    void openStream(const std::string &name);
     void closeStream();
   public:
-    LogLogic(const std::string &name, std::string& msg, output_type output_type);
+    LogLogic(const std::string &name, std::string &msg, output_type output_type);
     ~LogLogic() {};
 };
 
-void LogLogic::openStream(const std::string& name)
+void LogLogic::openStream(const std::string &name)
 {
   file_stream.open(name.c_str(), std::ios_base::app|std::ios_base::out);
   if(!file_stream.is_open())
@@ -60,7 +59,7 @@ void LogLogic::closeStream()
     file_stream.close();
   }
 }
-void LogLogic::write(std::string full_msg)
+void LogLogic::write(std::string &full_msg)
 {
   if(output == output_type::file)
   {
@@ -72,7 +71,7 @@ void LogLogic::write(std::string full_msg)
   }
 }
 
-void LogLogic::writeToStdo(std::string full_msg)
+void LogLogic::writeToStdo(std::string &full_msg)
 {
   std::cout<<full_msg<<std::endl;
 }
@@ -82,16 +81,17 @@ void LogLogic::writeToFilestream(std::string full_msg)
   file_stream<<full_msg<<std::endl;
 }
 
-void LogLogic::writeThread(std::string& msg)
+void LogLogic::writeThread(std::string &msg)
 {
   std::thread t(&LogLogic::writeToFilestream, this, msg);
   t.detach();
 }
 
-LogLogic::LogLogic(const std::string& name, std::string& msg, output_type output_type)
+LogLogic::LogLogic(const std::string &name, std::string &msg, output_type output_type)
 {
   output = output_type;
 
+  std::mutex write_mutex;
   std::lock_guard<std::mutex> lock(write_mutex);
 
   if (output == output_type::file)
@@ -121,7 +121,6 @@ class Logger
     ~Logger() {};
 };
 
-
 void Logger::print(const std::string &msg, severity_type severity)
 {
   std::string log_msg = getHeader(severity) + log_stream + msg;
@@ -133,12 +132,11 @@ void Logger::print(const std::string &msg, severity_type severity)
   }
 }
 
-
 std::string Logger::getTime()
 {
     std::string time_str;
     time_t raw_time;
-    time(& raw_time);
+    time(&raw_time);
     time_str = ctime(&raw_time);
     return time_str.substr(0 , time_str.size() - 1); // delete newline character
 }
@@ -168,7 +166,7 @@ std::string Logger::getHeader(severity_type severity)
     return header.str();
 }
 
-Logger::Logger(const std::string& name, output_type output_type)
+Logger::Logger(const std::string &name, output_type output_type)
 {
   output = output_type;
   file_name = name;
