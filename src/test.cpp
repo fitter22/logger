@@ -9,7 +9,7 @@ int main()
    }
    LOG_WARN("Loop is over");
 
-   LOG_ERR("And the program ends"); // probably this will be not saved
+   LOG_ERR("And the program ends");
 
    return 0;
 }

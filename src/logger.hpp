@@ -26,33 +26,27 @@ enum output_type
 #define LOG_WARN(msg) { log_inst.print(msg, severity_type::warning); }
 
 
-
-class LogLogicInterface
-{
-  public:
-    virtual void openStream(const std::string& name) = 0;
-    virtual void closeStream() = 0;
-    virtual void writeThread(std::string& msg) = 0;
-};
-
-class LogLogic : public LogLogicInterface
+class LogLogic
 {
   private:
     std::ofstream file_stream;
     std::string full_msg;
-    void write(std::string msg);
     std::mutex write_mutex;
-  public:
-    LogLogic() {}
+    output_type output;
+    void writeToStdo(std::string msg);
+    void writeToFilestream(std::string msg);
+    void writeThread(std::string& msg);
+    void write(std::string msg);
     void openStream(const std::string& name);
     void closeStream();
-    void writeThread(std::string& msg);
-    ~LogLogic();
+  public:
+    LogLogic(const std::string &name, std::string& msg, output_type output_type);
+    ~LogLogic() {};
 };
 
 void LogLogic::openStream(const std::string& name)
 {
-  file_stream.open(name.c_str(), std::ios_base::binary|std::ios_base::out);
+  file_stream.open(name.c_str(), std::ios_base::app|std::ios_base::out);
   if(!file_stream.is_open())
   {
     throw(std::runtime_error("LOGGER: Unable to open an output stream"));
@@ -66,25 +60,46 @@ void LogLogic::closeStream()
     file_stream.close();
   }
 }
-
 void LogLogic::write(std::string full_msg)
 {
-  write_mutex.lock();
+  if(output == output_type::file)
+  {
+    writeThread(full_msg);
+  }
+  else if (output == output_type::standard_output)
+  {
+    writeToStdo(full_msg);
+  }
+}
+
+void LogLogic::writeToStdo(std::string full_msg)
+{
+  std::cout<<full_msg<<std::endl;
+}
+
+void LogLogic::writeToFilestream(std::string full_msg)
+{
   file_stream<<full_msg<<std::endl;
-  write_mutex.unlock();
 }
 
 void LogLogic::writeThread(std::string& msg)
 {
-  std::thread t(&LogLogic::write, this, msg);
+  std::thread t(&LogLogic::writeToFilestream, this, msg);
   t.detach();
 }
 
-LogLogic::~LogLogic()
+LogLogic::LogLogic(const std::string& name, std::string& msg, output_type output_type)
 {
-    closeStream();
-}
+  output = output_type;
 
+  std::lock_guard<std::mutex> lock(write_mutex);
+
+  if (output == output_type::file)
+  {
+    openStream(name);
+  }
+  write(msg);
+}
 
 //------------------------------------------
 // Main logger instance
@@ -94,29 +109,27 @@ class Logger
 {
   private:
     std::string log_stream;
-    LogLogic* writer;
+    LogLogic *writer;
     output_type output;
+    std::string file_name;
 
   public:
     std::string getTime();
     std::string getHeader(severity_type severity);
-    Logger(const std::string& name, output_type output_type);
-    void print(const std::string& msg, severity_type severity);
-    ~Logger();
+    Logger(const std::string &name, output_type output_type);
+    void print(const std::string &msg, severity_type severity);
+    ~Logger() {};
 };
 
 
-void Logger::print(const std::string& msg, severity_type severity)
+void Logger::print(const std::string &msg, severity_type severity)
 {
   std::string log_msg = getHeader(severity) + log_stream + msg;
 
-  if(output == output_type::file)
+  writer = new LogLogic(file_name, log_msg, output);
+  if(!writer)
   {
-    writer->writeThread(log_msg);
-  }
-  else if (output == output_type::standard_output)
-  {
-    std::cout<<log_msg<<std::endl;
+    throw std::runtime_error("LOGGER: Unable to create the logger instance");
   }
 }
 
@@ -158,30 +171,9 @@ std::string Logger::getHeader(severity_type severity)
 Logger::Logger(const std::string& name, output_type output_type)
 {
   output = output_type;
-
-  writer = new LogLogic;
-  if(!writer)
-  {
-    throw std::runtime_error("LOGGER: Unable to create the logger instance");
-  }
-
-  if(output == output_type::file)
-  {
-    writer->openStream(name);
-  }
+  file_name = name;
 }
 
-Logger::~Logger()
-{
-    if(writer)
-    {
-      if(output == output_type::file)
-      {
-        writer->closeStream();
-      }
-      delete writer;
-    }
-}
 
 // make static logger obj, so it lives until the program ends
 static Logger log_inst("execution.log", output_type::file);
